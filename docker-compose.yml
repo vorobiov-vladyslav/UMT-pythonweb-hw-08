@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: hw08-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: hw08secret
+      POSTGRES_DB: hw08
+    ports:
+      - "5432:5432"
+    volumes:
+      - hw08-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d hw08"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    container_name: hw08-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:hw08secret@postgres:5432/hw08
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./main.py:/app/main.py
+      - ./src:/app/src
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini
+    command: ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+volumes:
+  hw08-pgdata:
